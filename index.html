@@ -521,14 +521,13 @@
                         </div>
                     </div>
                     <div class="contact-map">
-                        <iframe
-                            src="https://maps.google.com/maps?q=Τιμολέοντος+Βάσου+28,+Αθήνα&output=embed"
-                            width="100%" height="400"
-                            style="border:0; border-radius:12px;"
-                            allowfullscreen loading="lazy"
-                            referrerpolicy="no-referrer-when-downgrade"
-                            title="Χάρτης Ιατρείου Καββούρη">
-                        </iframe>
+                        <div id="mapContainer">
+                            <div id="mapPlaceholder" class="map-placeholder">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <p>Αποδεχτείτε τα cookies για προβολή του διαδραστικού χάρτη</p>
+                                <button id="mapConsentBtn">Ρυθμίσεις Cookies</button>
+                            </div>
+                        </div>
                         <p style="margin-top:8px; font-size:0.8rem; text-align:center;">
                             <a href="https://maps.google.com/maps?q=Τιμολέοντος+Βάσου+28,+Αθήνα"
                                target="_blank" rel="noopener noreferrer"
@@ -680,10 +679,31 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 Δήμητρα Σπ. Καββούρη &nbsp;—&nbsp; Όλα τα δικαιώματα διατηρούνται</p>
+                <p>&copy; 2025 Δήμητρα Σπ. Καββούρη &nbsp;—&nbsp; Όλα τα δικαιώματα διατηρούνται
+                &nbsp;|&nbsp; <a href="privacy.html" style="color:inherit; text-decoration:underline;">Πολιτική Απορρήτου</a>
+                &nbsp;|&nbsp; <a href="privacy.html#cookies" style="color:inherit; text-decoration:underline;">Cookies</a></p>
             </div>
         </div>
     </footer>
+
+    <!-- GDPR Cookie Banner -->
+    <div id="cookieBanner" class="cookie-banner" role="dialog" aria-modal="true" aria-labelledby="cookieTitle">
+        <div class="cookie-inner">
+            <i class="fas fa-cookie-bite cookie-icon" aria-hidden="true"></i>
+            <div class="cookie-text">
+                <strong id="cookieTitle">Χρήση Cookies</strong>
+                <p>Χρησιμοποιούμε cookies για την ενσωμάτωση Google Maps. Δεν συλλέγουμε προσωπικά δεδομένα χωρίς τη συγκατάθεσή σας. Διαβάστε την <a href="privacy.html">Πολιτική Απορρήτου</a> μας.</p>
+            </div>
+            <div class="cookie-actions">
+                <button id="cookieAccept" class="btn btn-primary">
+                    <i class="fas fa-check"></i> Αποδοχή
+                </button>
+                <button id="cookieReject" class="btn-ghost">
+                    Μόνο Απαραίτητα
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Navbar scroll effect
@@ -728,6 +748,51 @@
         document.querySelectorAll(
             '.spec-card, .service-item, .contact-card, .highlight-item, .affiliation-item'
         ).forEach(el => { el.classList.add('fade-in'); observer.observe(el); });
+
+        // GDPR Cookie Consent
+        (function() {
+            const banner   = document.getElementById('cookieBanner');
+            const consent  = localStorage.getItem('gdpr-consent');
+
+            function loadMap() {
+                const container   = document.getElementById('mapContainer');
+                const placeholder = document.getElementById('mapPlaceholder');
+                if (placeholder) placeholder.remove();
+                const iframe = document.createElement('iframe');
+                iframe.src = 'https://maps.google.com/maps?q=Τιμολέοντος+Βάσου+28,+Αθήνα&output=embed';
+                iframe.setAttribute('width', '100%');
+                iframe.setAttribute('height', '400');
+                iframe.style.cssText = 'border:0; border-radius:12px; display:block;';
+                iframe.setAttribute('allowfullscreen', '');
+                iframe.setAttribute('loading', 'lazy');
+                iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+                iframe.setAttribute('title', 'Χάρτης Ιατρείου Καββούρη');
+                container.appendChild(iframe);
+            }
+
+            function accept() {
+                localStorage.setItem('gdpr-consent', 'accepted');
+                banner.classList.remove('show');
+                loadMap();
+            }
+
+            function reject() {
+                localStorage.setItem('gdpr-consent', 'rejected');
+                banner.classList.remove('show');
+            }
+
+            if (consent === 'accepted') {
+                loadMap();
+            } else if (!consent) {
+                setTimeout(() => banner.classList.add('show'), 1500);
+            }
+
+            document.getElementById('cookieAccept').addEventListener('click', accept);
+            document.getElementById('cookieReject').addEventListener('click', reject);
+
+            const mapBtn = document.getElementById('mapConsentBtn');
+            if (mapBtn) mapBtn.addEventListener('click', () => banner.classList.add('show'));
+        })();
     </script>
 </body>
 </html>
