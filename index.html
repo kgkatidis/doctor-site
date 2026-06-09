@@ -686,6 +686,39 @@
         </div>
     </footer>
 
+    <!-- Chatbot Widget -->
+    <div class="chat-widget" id="chatWidget">
+        <div class="chat-window" id="chatWindow" aria-live="polite" aria-hidden="true">
+            <div class="chat-header">
+                <div class="chat-avatar"><i class="fas fa-user-md"></i></div>
+                <div class="chat-header-info">
+                    <strong>Βοηθός Ιατρείου</strong>
+                    <span>Δ. Καββούρη MD MSc &nbsp;·&nbsp; Αυτόματος</span>
+                </div>
+                <button class="chat-header-close" id="chatClose" aria-label="Κλείσιμο">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-quick-replies" id="chatQuickReplies">
+                <button class="qr-btn" data-q="ωράριο">⏰ Ωράριο</button>
+                <button class="qr-btn" data-q="τιμές">💶 Τιμές</button>
+                <button class="qr-btn" data-q="ραντεβού">📅 Ραντεβού</button>
+                <button class="qr-btn" data-q="πώς να έρθω">🚇 Οδηγίες</button>
+            </div>
+            <div class="chat-input-row">
+                <input type="text" id="chatInput" placeholder="Γράψτε την ερώτησή σας…" autocomplete="off" aria-label="Μήνυμα">
+                <button id="chatSend" aria-label="Αποστολή"><i class="fas fa-paper-plane"></i></button>
+            </div>
+            <p class="chat-footer-note">Αυτόματος βοηθός. Επείγον: <a href="tel:+302107449459">210 744 9459</a></p>
+        </div>
+        <button class="chat-toggle" id="chatToggle" aria-label="Βοηθός ιατρείου">
+            <i class="fas fa-comments" id="chatIconOpen"></i>
+            <i class="fas fa-times" id="chatIconClose" style="display:none"></i>
+            <span class="chat-badge" id="chatBadge">1</span>
+        </button>
+    </div>
+
     <!-- GDPR Cookie Banner -->
     <div id="cookieBanner" class="cookie-banner" role="dialog" aria-modal="true" aria-labelledby="cookieTitle">
         <div class="cookie-inner">
@@ -748,6 +781,189 @@
         document.querySelectorAll(
             '.spec-card, .service-item, .contact-card, .highlight-item, .affiliation-item'
         ).forEach(el => { el.classList.add('fade-in'); observer.observe(el); });
+
+        // ── Chatbot ────────────────────────────────────────────────────
+        (function() {
+            const win      = document.getElementById('chatWindow');
+            const toggle   = document.getElementById('chatToggle');
+            const closeBtn = document.getElementById('chatClose');
+            const msgs     = document.getElementById('chatMessages');
+            const input    = document.getElementById('chatInput');
+            const sendBtn  = document.getElementById('chatSend');
+            const badge    = document.getElementById('chatBadge');
+            const iconOpen = document.getElementById('chatIconOpen');
+            const iconClose= document.getElementById('chatIconClose');
+
+            let isOpen = false, welcomed = false;
+
+            // Knowledge base — arrays of keyword fragments → response
+            const KB = [
+                { k:['γεια','hello','χαιρε','καλημερ','καλησπερ','καλωσ','χαιρετ'],
+                  r:'Γεια σας! 👋 Είμαι ο αυτόματος βοηθός του ιατρείου της **Δήμητρας Καββούρη**.\n\nΠώς μπορώ να σας εξυπηρετήσω;' },
+
+                { k:['ωραριο','ωρα','ωρες','ανοιχτ','ανοιγ','ποτε','λειτουργ','σαββατ','κυριακ'],
+                  r:'Το ιατρείο λειτουργεί:\n\n📅 **Δευτέρα έως Παρασκευή**\n🕒 **15:00 – 22:00**\n\nΔεν γίνονται επισκέψεις Σαββατοκύριακο.' },
+
+                { k:['τιμη','τιμες','τιμεσ','κοστιζ','κοστ','ποσο','χρεων','χρηματ','ευρω','πληρω','αμοιβ'],
+                  r:'**Τιμοκατάλογος:**\n\n• Κλινική εξέταση: **€40** (~30 λεπτά)\n• Ιατρική βεβαίωση: **€20**\n• ΗΚΓ & κατ\' οίκον επίσκεψη: κατόπιν επικοινωνίας\n\nΤηλ: <a href="tel:+302107449459">210 744 9459</a>' },
+
+                { k:['ραντεβου','ραντεβό','κλεισ','ορισ','προγραμ','online','ηλεκτρον','καταχωρ','bookin'],
+                  r:'Κλείστε ραντεβού:\n\n📲 <a href="#appointment">Online μέσω Google Calendar</a>\n📞 Τηλεφωνικώς: <a href="tel:+302107449459">210 744 9459</a>\n\nΩράριο: Δευτ–Παρ 15:00–22:00' },
+
+                { k:['διευθυνσ','οδοσ','που βρισκ','πλατεια','μαυιλη','βασου','τιμολ','11521'],
+                  r:'📍 **Τιμολέοντος Βάσου 28**\nΠλατεία Μαυίλη, Αθήνα 11521\n\n450 μέτρα από το Μετρό **Αμπελόκηποι** (Γρ.3 – Μπλε)' },
+
+                { k:['μετρο','σταθμ','αμπελοκηπ','γραμμη','μπλε','συγκοιν','πως να ερθ','πως φταν','ταξι','λεωφ'],
+                  r:'🚇 Πλησιέστερος σταθμός: **Αμπελόκηποι** (Γραμμή 3 – Μπλε)\n\n🚶 Απόσταση: **450 μέτρα** από το ιατρείο.\n\nΣυνιστούμε το Μετρό — εύκολο πάρκινγκ δεν υπάρχει στην περιοχή.' },
+
+                { k:['παρκιν','parking','αυτοκιν','σταθμευ'],
+                  r:'Στην περιοχή Πλ. Μαυίλη υπάρχουν θέσεις σε παρακείμενες οδούς.\n\nΣυνιστούμε να έρθετε με **Μετρό** (στ. Αμπελόκηποι, 450μ.).' },
+
+                { k:['τηλεφων','τηλ','αριθμ','καλεσ','επικοινων'],
+                  r:'📞 **<a href="tel:+302107449459">210 744 9459</a>**\n\nΩράριο κλήσεων: Δευτ–Παρ 15:00–22:00' },
+
+                { k:['email','mail','ηλεκτρ','μειλ','demidoc'],
+                  r:'📧 **<a href="mailto:demidoc@windowslive.com">demidoc@windowslive.com</a>**' },
+
+                { k:['υπερτασ','πιεσ','αρτηριακ','hypertens'],
+                  r:'Η Δήμητρα Καββούρη κατέχει **ΜΔΕ ΕΚΠΑ στην Αρτηριακή Υπέρταση** και ειδικεύεται στη διάγνωση, παρακολούθηση και εξατομικευμένη θεραπεία της υπέρτασης.' },
+
+                { k:['διαβητ','σακχαρ','ινσουλ','γλυκ','diabetes'],
+                  r:'Ειδικεύεται στη **διαχείριση σακχαρώδη διαβήτη** τύπου 1 και 2, με έμφαση στην πρόληψη επιπλοκών.' },
+
+                { k:['θυρεοειδ','tsh','υποθυρ','υπερθυρ','θυρε'],
+                  r:'Στο ιατρείο γίνεται **πλήρης έλεγχος, διάγνωση και παρακολούθηση** παθήσεων θυρεοειδούς (υποθυρεοειδισμός, υπερθυρεοειδισμός, οζίδια).' },
+
+                { k:['χοληστερ','λιπιδ','τριγλυκ','υπερλιπιδ','λιποπρ'],
+                  r:'Ειδικεύεται στην **αντιμετώπιση δυσλιπιδαιμίας** (υψηλή χοληστερόλη, τριγλυκερίδια) και πρόληψη καρδιαγγειακού κινδύνου.' },
+
+                { k:['ηκγ','καρδιογρ','ηλεκτροκαρδ','ecg','ekg'],
+                  r:'✅ Πραγματοποιείται **Ηλεκτροκαρδιογράφημα (ΗΚΓ)** στο ιατρείο.\n\nΓια τιμή επικοινωνήστε: <a href="tel:+302107449459">210 744 9459</a>' },
+
+                { k:['κατ οικον','οικον','home visit','στο σπιτ','επισκεψη σ'],
+                  r:'✅ Πραγματοποιούνται **κατ\' οίκον επισκέψεις**.\n\nΓια πληροφορίες και τιμή: <a href="tel:+302107449459">210 744 9459</a>' },
+
+                { k:['ασφαλιστ','εοπυ','ταμει','ασφαλ'],
+                  r:'Το ιατρείο **συνεργάζεται με ασφαλιστικά ταμεία**.\n\nΓια λεπτομέρειες σχετικά με το δικό σας ταμείο: <a href="tel:+302107449459">210 744 9459</a>' },
+
+                { k:['αμεα','αναπηρ','προσβασιμ','αναπηρικ'],
+                  r:'✅ Το ιατρείο είναι **πλήρως προσβάσιμο σε ΑμεΑ**.' },
+
+                { k:['βεβαιωσ','πιστοποιητ','certif','δικαιολογ'],
+                  r:'Ιατρικές βεβαιώσεις: **€20**\n\nΕκδίδονται κατόπιν εξέτασης. Ωράριο: Δευτ–Παρ 15:00–22:00.' },
+
+                { k:['εμβολ','γριπ','εμβολιασμ'],
+                  r:'✅ Πραγματοποιείται **εμβολιασμός γρίπης** στο ιατρείο.\n\nΓια ραντεβού: <a href="tel:+302107449459">210 744 9459</a>' },
+
+                { k:['συνταγ','φαρμακ','συνταγογρ'],
+                  r:'✅ Εκδίδονται **ηλεκτρονικές συνταγές** κατά τη διάρκεια της εξέτασης.' },
+
+                { k:['καρδιαγγ','καρδιολ','καρδι','προληψ'],
+                  r:'Ειδικεύεται στην **πρόληψη καρδιαγγειακού κινδύνου** — αξιολόγηση παραγόντων κινδύνου (υπέρταση, διαβήτης, λιπίδια, κάπνισμα) με σύγχρονες μεθόδους.' },
+
+                { k:['νοσοκομ','ναυτικ','ντυναν','dunant','mediterraneo','λαικ'],
+                  r:'Συνεργαζόμενα νοσοκομεία:\n\n⚓ **Ναυτικό Νοσοκομείο Αθηνών** (Επιμελήτρια Β\')\n🏥 **Mediterraneo Hospital**\n🏥 **Ερρίκος Ντυνάν Hospital**' },
+
+                { k:['σπουδ','πτυχ','μεταπτ','τιτλ','εκπαιδ','αποφοιτ','αριστοτελ','εκπα','απθ'],
+                  r:'Ακαδημαϊκό υπόβαθρο:\n\n🎓 Πτυχίο Ιατρικής, **ΑΠΘ** (2006–2012)\n🎖️ Στρατιωτική Σχολή Αξιωματικών\n🏥 Ειδικότητα, **Λαϊκό Ν.Α.** (2018–2021)\n📜 **ΜΔΕ ΕΚΠΑ** – Αρτηριακή Υπέρταση (2019–2021)' },
+
+                { k:['doctoranytime','αξιολ','βαθμολ','βαθμ','κριτ'],
+                  r:'⭐ Βαθμολογία **10.0 / 10** με **43 αξιολογήσεις** ασθενών στο Doctoranytime — η υψηλότερη δυνατή βαθμολογία!' },
+
+                { k:['ευχαριστ','thanks','ευχαριστω'],
+                  r:'Παρακαλώ! 😊 Αν έχετε άλλη ερώτηση, είμαι εδώ. Καλή υγεία!' },
+
+                { k:['αντιο','bye','γεια χαρ','αντε'],
+                  r:'Αντίο! Καλή υγεία! 👋\n\nΓια επικοινωνία: <a href="tel:+302107449459">210 744 9459</a>' }
+            ];
+
+            function norm(s) {
+                return s.toLowerCase()
+                    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+                    .replace(/[^a-zα-ως\s0-9]/g,'');
+            }
+
+            function getReply(txt) {
+                const n = norm(txt);
+                for (const entry of KB)
+                    for (const kw of entry.k)
+                        if (n.includes(norm(kw))) return entry.r;
+                return 'Δεν κατάλαβα την ερώτησή σας. 🙏\n\nΕπικοινωνήστε απευθείας:\n📞 <a href="tel:+302107449459">210 744 9459</a>\n📧 <a href="mailto:demidoc@windowslive.com">demidoc@windowslive.com</a>';
+            }
+
+            function fmt(s) {
+                return s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+            }
+
+            function addMsg(html, who) {
+                const d = document.createElement('div');
+                d.className = 'chat-msg ' + who;
+                const b = document.createElement('div');
+                b.className = 'chat-bubble';
+                b.innerHTML = fmt(html);
+                d.appendChild(b);
+                msgs.appendChild(d);
+                msgs.scrollTop = msgs.scrollHeight;
+            }
+
+            function botReply(text) {
+                const t = document.createElement('div');
+                t.className = 'chat-msg bot';
+                t.id = 'chatTyping';
+                t.innerHTML = '<div class="chat-typing"><span></span><span></span><span></span></div>';
+                msgs.appendChild(t);
+                msgs.scrollTop = msgs.scrollHeight;
+                const delay = 650 + Math.min(text.length * 8, 800);
+                setTimeout(() => {
+                    const el = document.getElementById('chatTyping');
+                    if (el) el.remove();
+                    addMsg(text, 'bot');
+                }, delay);
+            }
+
+            function send(txt) {
+                txt = txt.trim();
+                if (!txt) return;
+                addMsg(txt, 'user');
+                input.value = '';
+                botReply(getReply(txt));
+            }
+
+            function openChat() {
+                isOpen = true;
+                win.classList.add('open');
+                win.setAttribute('aria-hidden','false');
+                iconOpen.style.display = 'none';
+                iconClose.style.display = '';
+                badge.style.display = 'none';
+                if (!welcomed) {
+                    welcomed = true;
+                    setTimeout(() => botReply('Γεια σας! 👋 Είμαι ο αυτόματος βοηθός του ιατρείου.\n\nΡωτήστε με για **ωράριο**, **τιμές**, **ραντεβού**, **εξειδίκευση** ή οτιδήποτε άλλο!'), 300);
+                }
+                setTimeout(() => input.focus(), 350);
+            }
+
+            function closeChat() {
+                isOpen = false;
+                win.classList.remove('open');
+                win.setAttribute('aria-hidden','true');
+                iconOpen.style.display = '';
+                iconClose.style.display = 'none';
+            }
+
+            toggle.addEventListener('click', () => isOpen ? closeChat() : openChat());
+            closeBtn.addEventListener('click', closeChat);
+            sendBtn.addEventListener('click', () => send(input.value));
+            input.addEventListener('keydown', e => { if (e.key === 'Enter') send(input.value); });
+
+            document.querySelectorAll('.qr-btn').forEach(btn =>
+                btn.addEventListener('click', () => send(btn.dataset.q)));
+
+            // Show badge after 6s to draw attention
+            setTimeout(() => {
+                if (!isOpen) { badge.style.display = 'flex'; }
+            }, 6000);
+        })();
 
         // GDPR Cookie Consent
         (function() {
